@@ -35,7 +35,9 @@ jobs:
     needs: build_and_test # This job depends on the build_and_test job
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
-      contents: read # Changed from write, as release creation is removed
+      contents: read
+    environment:
+      name: "commandline-ktx"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -59,11 +61,10 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        run: ./gradlew :library:publishAndReleaseToMavenCentral --no-daemon --warning-mode all --debug --stacktrace # Added --debug
+        run: ./gradlew :library:publishAndReleaseToMavenCentral --stacktrace
         env:
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
 
-      # Removed the Create GitHub Release step as requested
