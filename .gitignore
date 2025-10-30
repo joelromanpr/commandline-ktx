@@ -41,6 +41,7 @@ local.properties
 # Note: Keep the main gradle.properties in source control if it only contains build config,
 # but ensure local changes with credentials are NOT committed. It's safer to use local.properties.
 
+library/build.*
 # ----------------------------------------------------------------------
 # 3. IDE-SPECIFIC FILES (IntelliJ IDEA)
 # ----------------------------------------------------------------------
@@ -67,3 +68,17 @@ replay_pid*
 
 # Windows
 Thumbs.db
+/library/build/
+/library/build/classes/
+/library/build/kotlin/
+/library/build/libs/
+/library/build/reports/
+/library/build/test-results/
+/library/build/tmp/
+/demo/build/
+/demo/build/classes/
+/demo/build/distributions/
+/demo/build/kotlin/
+/demo/build/libs/
+/demo/build/scripts/
+/demo/build/tmp/
