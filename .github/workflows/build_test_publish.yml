@@ -35,7 +35,7 @@ jobs:
     needs: build_and_test # This job depends on the build_and_test job
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
-      contents: read
+      contents: read # Changed from write, as release creation is removed
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        run: ./gradlew :library:publishAndReleaseToMavenCentral --stacktrace # Using the specified task
+        run: ./gradlew :library:publishAndReleaseToMavenCentral --no-daemon --warning-mode all --stacktrace
         env:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
