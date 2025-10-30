@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    id("com.vanniktech.maven.publish")
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 version = "1.0.0"

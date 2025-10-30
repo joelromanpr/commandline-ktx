@@ -37,7 +37,7 @@ local.properties
 *.p12
 
 # Gradle properties files used to store credentials locally
-gradle.properties
+# gradle.properties
 # Note: Keep the main gradle.properties in source control if it only contains build config,
 # but ensure local changes with credentials are NOT committed. It's safer to use local.properties.
 

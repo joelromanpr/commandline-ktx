@@ -35,7 +35,7 @@ jobs:
     needs: build_and_test # This job depends on the build_and_test job
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
-      contents: write # <--- ADDED THIS LINE
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -59,25 +59,10 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        run: ./gradlew :library:publishAndReleaseToMavenCentral --stacktrace
+        run: ./gradlew :library:publishAndReleaseToMavenCentral --stacktrace # Using the specified task
         env:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
 
-      - name: Create GitHub Release
-        if: steps.extract_version_info.outputs.is_snapshot == 'false'
-        uses: actions/create-release@v1
-        with:
-          tag_name: v${{ steps.extract_version_info.outputs.version }}
-          release_name: Release v${{ steps.extract_version_info.outputs.version }}
-          body: | # Placeholder for release notes, you'd typically update this manually or from a changelog
-            ## Release Notes v${{ steps.extract_version_info.outputs.version }}
-
-            This is an automated release.
-            Please see the commit history for changes.
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
