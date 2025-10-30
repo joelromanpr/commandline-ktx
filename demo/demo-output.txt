@@ -1,0 +1,4 @@
+🔊 Verbose Mode: Detailed log enabled.
+  [1/3] Software Engineering is awesome -- The Robots are coming, CLI Fan!
+  [2/3] Software Engineering is awesome -- The Robots are coming, CLI Fan!
+  [3/3] Software Engineering is awesome -- The Robots are coming, CLI Fan!
