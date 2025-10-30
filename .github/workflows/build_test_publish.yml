@@ -24,12 +24,12 @@ jobs:
         run: ./gradlew build
       - name: Upload Test Reports
         if: always() # Always run this step, even if the build fails
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # Updated to v4
         with:
           name: test-reports
           path: '**/build/reports/tests/test'
 
-  # This job publishes either a SNAPSHOT or a RELEASE version based on the version string
+  # This job publishes either a SNAPSHOT version on every push to main
   publish:
     runs-on: ubuntu-latest
     needs: build_and_test # This job depends on the build_and_test job
