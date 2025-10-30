@@ -4,7 +4,13 @@ We'd love to accept your patches and contributions to this project. There are ju
 follow.
 
 ---
+## Preparing a Pull Request for Review
+Ensure your change is properly formatted and adheres to our code standards by running the following command locally:
 
+```bash
+chmod +x ./scripts/prepare_for_pr.sh
+./scripts/prepare_for_pr.sh
+```
 
 ### Suggested Commit Message Style (optional)
 
