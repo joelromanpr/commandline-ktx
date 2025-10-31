@@ -51,7 +51,10 @@ jobs:
       - name: Extract Version and Type
         id: extract_version_info
         run: |
-          VERSION=$(grep 'version =' library/build.gradle.kts | grep -o "'.*'" | sed "s/'//g")
+          VERSION=$(grep 'version =' build.gradle.kts | grep -o "'.*'" | sed "s/'//g")
+          if [ -z "$VERSION" ]; then
+            VERSION=$(grep 'version =' library/build.gradle.kts | grep -o "'.*'" | sed "s/'//g")
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           if [[ "$VERSION" == *"-SNAPSHOT"* ]]; then
             echo "is_snapshot=true" >> $GITHUB_OUTPUT
@@ -59,7 +62,8 @@ jobs:
             echo "is_snapshot=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Publish to Maven Central
+      - name: Publish Release to Maven Central
+        if: steps.extract_version_info.outputs.is_snapshot == 'false'
         run: ./gradlew :library:publishAndReleaseToMavenCentral --no-daemon --warning-mode all --stacktrace
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -67,4 +71,12 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
 
-      # Removed the Create GitHub Release step as requested
+      - name: Publish Snapshot to Maven Central
+        if: steps.extract_version_info.outputs.is_snapshot == 'true'
+        run: ./gradlew :library:publishMavenPublicationToMavenCentralRepository --no-daemon --warning-mode all --stacktrace
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+
