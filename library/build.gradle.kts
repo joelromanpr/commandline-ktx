@@ -4,7 +4,6 @@ plugins {
 
 }
 
-version = "1.0.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -24,6 +23,7 @@ kotlin {
     explicitApi()
 }
 
+version = "1.0.1-SNAPSHOT"
 mavenPublishing {
     coordinates(
         groupId = "io.github.joelromanpr",

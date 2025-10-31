@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Publish to Maven Central
-        run: ./gradlew :library:publishAndReleaseToMavenCentral --no-daemon --warning-mode all --stacktrace
+        run: ./gradlew :library:publishAndReleaseToMavenCentral --stacktrace
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
