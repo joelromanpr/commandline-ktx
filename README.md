@@ -1,6 +1,6 @@
 # commandline-ktx
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/joelromanpr/commandline-ktx/build.yml?branch=main)](https://github.com/joelromanpr/commandline-ktx/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/joelromanpr/commandline-ktx/build_test_publish.yml?branch=main)](https://github.com/joelromanpr/commandline-ktx/actions)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.joelromanpr/commandline-ktx.svg)](https://search.maven.org/artifact/io.github.joelromanpr/commandline-ktx)
 
 A simple, modern, and type-safe command-line argument parser for Kotlin, built with annotations and reflection.
