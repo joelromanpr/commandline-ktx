@@ -31,6 +31,21 @@ For architecture and known limitations, see [Project map](docs/PROJECT_MAP.md). 
 
 ## Releases
 
-Merging a pull request does not publish a package. A maintainer prepares a version change through a pull request to `main`, then creates a `vX.Y.Z` tag on that `main` commit. The separate release workflow verifies that the tag matches the non-snapshot library version and runs the Maven Central publication through the release environment. Contributors never need publishing credentials.
+Only maintainers publish. Contributors can note release impact in a pull request; they need no publishing credentials. Merging a pull request never publishes a package.
+
+Release when the intended changes are merged and documented, and `verify` passes on `main`. Use a patch version for compatible fixes, minor for compatible additions, and major for breaking API changes.
+
+1. In a pull request, set `library/build.gradle.kts` to `X.Y.Z` without `-SNAPSHOT` and update the README dependency examples. Merge after `verify` passes.
+2. From a clean checkout of that merged `main` commit, create and push its tag:
+
+   ```bash
+   git fetch origin
+   git switch main
+   git pull --ff-only origin main
+   git tag -a vX.Y.Z -m "Release X.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+3. Pushing the tag starts `release.yml` immediately. It checks the tag and version, builds, and publishes to Maven Central. Confirm the workflow succeeds and the artifact is available; then use another pull request to move the library to the next `-SNAPSHOT` version.
 
 Conventional Commit messages are welcome (`feat:`, `fix:`, `docs:`, `test:`), but the pull request title and description matter more than a particular commit format.
