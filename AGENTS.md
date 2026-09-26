@@ -33,3 +33,4 @@
 - Keep CLI parsing, `parseStructured`, `CommandSpec.toJsonSchema()`, and MCP bridge validation aligned. Custom converters accept strings; their JSON Schema must declare `type: string`.
 - Config files are resolved against the process working directory. Do not assume module-relative paths.
 - Both published modules share one version; tag `vX.Y.Z` on merged `main` triggers the release workflow.
+- Present industry examples as possible JVM-hosted uses, not current adopters. Do not claim on-device mobile support, hardware drivers, flight qualification, or a bundled MCP server.
