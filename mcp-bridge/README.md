@@ -2,6 +2,8 @@
 
 `commandline-ktx-mcp-bridge` turns one annotated command into JSON-compatible MCP tool descriptor fields and validates tool arguments through the same parser used for command-line input. It adds no MCP server, transport, or SDK dependency.
 
+An existing JVM-based MCP host could use it to expose a data import, laboratory test, or ground-side telemetry query. These are example integrations; this module supplies input metadata and validation, while the host supplies the operation and its permissions.
+
 Integration sketch (`countItems`, `sendResult`, and `sendToolError` are application functions):
 
 ```kotlin
