@@ -3,167 +3,144 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/joelromanpr/commandline-ktx/verify.yml?branch=main)](https://github.com/joelromanpr/commandline-ktx/actions/workflows/verify.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.joelromanpr/commandline-ktx.svg)](https://search.maven.org/artifact/io.github.joelromanpr/commandline-ktx)
 
-A simple, modern, and type-safe command-line argument parser for Kotlin, built with annotations and reflection.
+A small Kotlin/JVM command-line parser. Annotate mutable properties, parse arguments without exiting the process, and handle a `ParserResult` in your application.
 
-`commandline-ktx` is designed to be intuitive and require minimal boilerplate. Define your arguments in a data class, and let the parser handle the rest.
+Version **2.0.0** adds a deterministic command description, structured input, more precise diagnostics, and an optional MCP bridge. It is a major release because option-group membership now requires explicit property annotations; see the migration section below. The [contribution and release guide](CONTRIBUTING.md) explains how changes reach `main` and how maintainers publish tagged releases.
 
-## Features
+## Install 2.0.0
 
-- **Declarative:** Define arguments using simple annotations (`@Option`, `@Value`).
-- **Type-Safe:** Supports `String`, `Int`, `Double`, `Boolean`, and `List<String>` out of the box.
-- **Extensible:** Register custom `TypeConverter` instances for your own data types.
-- **Flexible Defaults:** Provide default values from annotations, environment variables (`@EnvVar`), or a configuration file (`@ConfigFile`).
-- **Validation:** Enforce required options and integer ranges. See [known limitations](docs/PROJECT_MAP.md#confirmed-gaps-and-useful-next-changes) for the current `@OptionGroup` behavior.
-- **Automatic Help Text:** Generate well-formatted help text from your annotated class.
-
-## Getting Started
-
-`commandline-ktx` is hosted on Maven Central.
-
-### Gradle (Kotlin DSL)
+Add the core parser and, if needed, the optional MCP bridge:
 
 ```kotlin
 dependencies {
-    implementation("io.github.joelromanpr:commandline-ktx:1.0.0")
+    implementation("io.github.joelromanpr:commandline-ktx:2.0.0")
+    // Optional when exposing a command as an MCP tool:
+    implementation("io.github.joelromanpr:commandline-ktx-mcp-bridge:2.0.0")
 }
 ```
 
-### Maven
+For Maven:
 
 ```xml
 <dependency>
     <groupId>io.github.joelromanpr</groupId>
     <artifactId>commandline-ktx</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
+</dependency>
+<!-- Add the optional bridge only if your application needs it. -->
+<dependency>
+    <groupId>io.github.joelromanpr</groupId>
+    <artifactId>commandline-ktx-mcp-bridge</artifactId>
+    <version>2.0.0</version>
 </dependency>
 ```
 
-## How to Use
+Both published artifacts use the same version; the `demo` module is an application and is not published.
 
-### 1. Define Your Arguments
+## Parse a command
 
-Create a `data class` and use annotations to define the command-line arguments your application accepts.
-
-- `@Option`: For named options (e.g., `--verbose`, `-f file.txt`).
-- `@Value`: For positional arguments (e.g., `input.txt`).
+Define a class with mutable annotated properties. `@Option` accepts a named value, and `@Value` accepts a positional value. The parser supports `String`, `Int`, `Double`, `Boolean`, and `List<String>`; register a `TypeConverter` for another type.
 
 ```kotlin
 import com.joelromanpr.commandline.ktx.Parser
-import com.joelromanpr.commandline.ktx.annotations.Application
-import com.joelromanpr.commandline.ktx.annotations.ConfigFile
-import com.joelromanpr.commandline.ktx.annotations.EnvVar
 import com.joelromanpr.commandline.ktx.annotations.Option
 import com.joelromanpr.commandline.ktx.annotations.Value
-import com.joelromanpr.commandline.ktx.converters.TypeConverter
 import com.joelromanpr.commandline.ktx.core.ParserResult
 
-@Application(
-    name = "MyApp",
-    version = "1.0.0",
-    description = "A powerful demonstration application."
+data class Options(
+    @Option(longName = "count", default = "1", helpText = "Number of greetings")
+    var count: Int = 1,
+    @Value(index = 0, required = true, helpText = "Who to greet")
+    var name: String = ""
 )
-@ConfigFile("config.properties") // Load defaults from a file
-data class AppOptions(
-    @Option(longName = "text", helpText = "Use a raw text string as input.")
-    var text: String? = null,
 
-    @Value(index = 0, helpText = "Use a file as input.")
-    var inputFile: String? = null,
-
-    @Option(shortName = 'n', longName = "name", helpText = "The name to use in the greeting.")
-    @EnvVar("APP_USER_NAME") // Fallback to an environment variable
-    var name: String = "Guest",
-
-    @Option(longName = "uri", helpText = "A custom URI to connect to.")
-    var serviceUri: Uri? = null // Custom types are supported!
-)
-```
-
-### 2. Create a Custom Type Converter (Optional)
-
-If you have custom data types, like the `Uri` class above, create a `TypeConverter`.
-
-```kotlin
-// Your custom data type
-data class Uri(val scheme: String, val host: String, val port: Int)
-
-// The converter
-class UriConverter : TypeConverter<Uri> {
-    override fun convert(value: String): Uri {
-        val parts = value.split("://")
-        val scheme = parts[0]
-        val rest = parts[1].split(":")
-        return Uri(scheme, rest[0], rest.getOrNull(1)?.toInt() ?: 80)
-    }
-}
-```
-
-### 3. Parse the Arguments
-
-In your `main` function, create a `Parser` instance (registering any custom converters) and call `parseArguments`.
-
-```kotlin
 fun main(args: Array<String>) {
-    // Create a parser, registering the custom converter
-    val parser = Parser(mapOf(Uri::class to UriConverter()))
-
-    // Handle the --help flag
+    val parser = Parser.Default
     if (args.contains("--help") || args.contains("-h")) {
-        println(parser.generateHelpText<AppOptions>())
+        println(parser.generateHelpText<Options>())
         return
     }
-
-    when (val result = parser.parseArguments<AppOptions>(args)) {
-        is ParserResult.Parsed -> {
-            val options = result.value
-            println("Success! Welcome, ${options.name}.")
-            // ... your application logic ...
-        }
-        is ParserResult.NotParsed -> {
-            println("Error parsing arguments:")
-            result.errors.forEach { println("  - ${it.message}") }
-            println("\n" + parser.generateHelpText<AppOptions>())
-        }
+    when (val result = parser.parseArguments<Options>(args)) {
+        is ParserResult.Parsed -> println("Hello, ${result.value.name}!".repeat(result.value.count))
+        is ParserResult.NotParsed -> result.errors.forEach { System.err.println(it.message) }
     }
 }
 ```
 
-### 4. Provide a Configuration File (Optional)
+With `@ConfigFile` and `@EnvVar`, command-line values take priority over configuration file values, then environment variables, annotation defaults, and property initial values. A configuration file path is relative to the process working directory. See the [project map](docs/PROJECT_MAP.md) for parser behavior and remaining limitations.
 
-Create the `config.properties` file specified in the `@ConfigFile` annotation. The current fallback order is command line, config file, environment variable, annotation default, then the property's initial value.
+## One command definition for CLI and structured callers
 
-```properties
-# config.properties
+Version 2.0.0 makes group membership explicit on each property. A class-level `@OptionGroup` declares a mutually exclusive group; `group = "input"` puts a named or positional property in it. Other options stay outside the group.
 
-# The default name to use
-name = ConfigDefault
+```kotlin
+import com.joelromanpr.commandline.ktx.Parser
+import com.joelromanpr.commandline.ktx.annotations.Option
+import com.joelromanpr.commandline.ktx.annotations.OptionGroup
+import com.joelromanpr.commandline.ktx.annotations.Value
+import com.joelromanpr.commandline.ktx.core.ParserResult
+
+@OptionGroup(name = "input", required = true)
+data class InputOptions(
+    @Option(longName = "text", group = "input") var text: String? = null,
+    @Value(index = 0, group = "input") var file: String? = null,
+    @Option(longName = "verbose") var verbose: Boolean = false
+)
+
+val parser = Parser.Default
+val spec = parser.describe<InputOptions>()
+val schema: Map<String, Any?> = spec.toJsonSchema()
+val result = parser.parseStructured<InputOptions>(
+    mapOf("text" to "hello", "verbose" to false)
+)
+if (result is ParserResult.Parsed) println(result.sources) // text and verbose: STRUCTURED
 ```
 
-## Automatic Help Text
+`describe<T>()` validates the command definition and returns options in canonical-name order and positional values in index order. `toJsonSchema()` exports an object-root JSON Schema with built-in types, integer bounds, required fields, and group rules. The schema is a description for structured callers; the parser does not parse JSON text or run a general JSON Schema validator. Annotation defaults are available in `CommandSpec`, but are not emitted as JSON Schema `default` values.
 
-Calling `parser.generateHelpText<AppOptions>()` produces help text based on your annotations. For example (option order may vary):
+`parseStructured(Map<String, Any?>)` accepts typed values under long option names (or the short name when no long name exists) and positional **property names**. It rejects unknown fields and invalid types. It uses annotation defaults and property initial values, but does not read ambient config files or environment variables. For successful calls, `ParserResult.Parsed.sources` maps Kotlin property names to `ValueSource.CLI`, `CONFIG`, `ENVIRONMENT`, `ANNOTATION_DEFAULT`, or `STRUCTURED`; unchanged property initial values have no entry. Failures expose a stable `ParseError.code`, `field`, and an optional zero-based CLI `tokenIndex`.
 
+Custom converters still accept strings. To export a custom type, provide a matching schema explicitly:
+
+```kotlin
+import com.joelromanpr.commandline.ktx.Parser
+import com.joelromanpr.commandline.ktx.annotations.Option
+import com.joelromanpr.commandline.ktx.converters.TypeConverter
+import java.net.URI
+
+data class ConnectionOptions(@Option(longName = "uri") var uri: URI? = null)
+
+val parser = Parser(mapOf(URI::class to object : TypeConverter<URI> {
+    override fun convert(value: String): URI = URI(value).also { require(it.isAbsolute) }
+}))
+val schema = parser.describe<ConnectionOptions>().toJsonSchema(
+    mapOf(URI::class to mapOf("type" to "string", "format" to "uri"))
+)
 ```
-MyApp 1.0.0
-A powerful demonstration application.
 
-Usage: myapp [options] [arg0]
+The converter and schema are the application's responsibility: the library cannot infer a custom input shape or enforce arbitrary custom JSON Schema keywords. Set `sensitive = true` on an `@Option` to redact rejected values from diagnostics. Sensitive annotation defaults are rejected; supply secrets through the caller, environment, or config and keep them out of schema descriptions.
 
-Configuration file: config.properties
+### Optional MCP bridge
 
-Options:
-  --text               Use a raw text string as input. 
-  -n, --name           The name to use in the greeting. (env: APP_USER_NAME)
-  --uri                A custom URI to connect to. 
+The `mcp-bridge` module maps a command definition to MCP tool descriptor fields and routes a structured argument map through the parser before invoking a handler:
 
-Arguments:
-  <arg0> Use a file as input.
+```kotlin
+import com.joelromanpr.commandline.ktx.mcp.mcpTool
+
+val tool = Parser.Default.mcpTool<InputOptions>("greet", "Greet a person")
+val descriptor = tool.descriptor() // name, description, inputSchema
 ```
 
-## License
+It has no MCP server, transport, or SDK dependency. The host application owns authorization, confirmation for side effects, and output serialization. See the [bridge example](mcp-bridge/README.md) for invocation and error handling.
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for the full license text.
+### Migrating option groups from 1.0.0
+
+Earlier versions implicitly included every named option in every class-level `@OptionGroup`, while positional values were excluded. In 2.0.0, add `group = "group-name"` to **each intended member**, including positional members. Leave unrelated flags ungrouped. A group without members is an invalid command definition, so update affected classes before upgrading.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the topic branch, pull request, local check, and release process. The [project map](docs/PROJECT_MAP.md) lists current parser limitations and good first directions for tests and fixes.
+Use a short-lived topic branch or fork and open a pull request to `main`. Run `./gradlew spotlessCheck build` before submitting. Merging a pull request does not publish; maintainers release from a versioned tag after verification. See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete path and [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) for architecture and current opportunities.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

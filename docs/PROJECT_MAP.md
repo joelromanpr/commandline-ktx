@@ -2,34 +2,42 @@
 
 ## What this project does
 
-`commandline-ktx` provides a small annotation-based argument parser for Kotlin command-line applications. A consumer defines mutable properties annotated with `@Option` or `@Value`, optionally supplies `@EnvVar`, `@ConfigFile`, `@Range`, and a custom `TypeConverter`, then calls `Parser.parseArguments`. The library returns a `ParserResult.Parsed` value or structured errors. `Parser.generateHelpText` creates usage text from the same annotations.
+`commandline-ktx` maps command-line arguments to mutable Kotlin properties annotated with `@Option` and `@Value`. It returns `ParserResult.Parsed` or `ParserResult.NotParsed`; the caller chooses how to display help and errors. The parser can use config files, environment variables, annotation defaults, and custom `TypeConverter` instances.
 
-The `library` Gradle module holds the published API. The `demo` module exercises it as an application. Java 17 is the target toolchain, and `library` uses Kotlin explicit API mode. Reflection is a runtime dependency; parsing is synchronous and reads a config file from the current working directory when one is declared.
+Version 2.0.0 also compiles annotations into a deterministic `CommandSpec`, exports an object-root JSON Schema, and validates a typed `Map<String, Any?>` through `parseStructured`. The optional `mcp-bridge` module turns that command definition into MCP tool descriptor fields and validates arguments before a host-provided handler runs.
 
-## How parsing is organized
+## Layout and runtime
 
-1. `Parser` creates a no-argument instance of the requested class and inspects its mutable properties.
-2. It maps named options and positional indexes from annotations.
-3. It scans command-line tokens and converts values with a registered converter or built-in conversion.
-4. It fills absent named options from config, environment, or annotation defaults, then checks required values and option groups.
-5. It returns a result object; the caller decides how to display errors or help.
-
-The public API is in `library/src/main/kotlin/com/joelromanpr/commandline/ktx/`. The main behavior tests are in `library/src/test/kotlin/commandline/ktx/ParserTest.kt`.
-
-## Confirmed gaps and useful next changes
-
-These are starting points for issues and pull requests, not promises about future behavior. Add a failing behavior test before changing parsing semantics.
-
-| Priority | Current gap | Useful next change |
+| Module | Purpose | Publication |
 | --- | --- | --- |
-| High | `@OptionGroup` targets classes, so property membership cannot be expressed. The parser places every named option in each class group and excludes positional values. The demo's required input-source group can therefore reject ordinary flags and accept no input source. | Define property membership semantics, test named and positional members plus unrelated flags, then align the annotation, parser, demo, and README. |
-| High | There is no schema validation for duplicate option aliases or positional indexes; later properties can silently replace earlier mappings. | Validate a schema before scanning and add duplicate alias/index tests. |
-| Medium | A named option with a missing or invalid value can still be marked as supplied, creating misleading secondary required/group diagnostics alongside the parse error. | Mark an option supplied only after successful conversion and test error lists. |
-| Medium | Tokens beginning with `-` are always treated as options; `--` and negative numeric values are unsupported. Extra positional values are silently ignored. | Specify token rules, then test delimiter, negative numbers, unknown options, and surplus positionals. |
-| Medium | Fallback priority is config before environment, which may surprise applications expecting environment overrides. Boolean values from config, environment, or annotation defaults use `String.toBoolean()`, which accepts malformed text as `false`. | Decide whether this priority should remain; test CLI/config/env/default/initializer combinations and strict Boolean conversion. |
-| Medium | Tests cover common options but not config/environment precedence, generated help, malformed schemas, or the demo's input-source path. | Add focused unit tests and a small demo smoke test for public examples. |
-| Low | `gradle.properties` still contains `android-essentials` POM URL values, even though the library publication block sets this project's POM URLs. | Remove obsolete properties and keep publication metadata in one place. |
+| `library` | Parser, annotations, converter interface, command specification, and result/error types | `io.github.joelromanpr:commandline-ktx` |
+| `mcp-bridge` | Thin tool descriptor and invocation adapter, without an MCP server or SDK | `io.github.joelromanpr:commandline-ktx-mcp-bridge` |
+| `demo` | Runnable application showing a real parser consumer | Not published |
 
-## Contribution shape
+The public core API lives under `library/src/main/kotlin/com/joelromanpr/commandline/ktx/`. Tests are in `library/src/test/kotlin/commandline/ktx/`; the bridge has its own tests. Java 17 is the target toolchain, and published modules use Kotlin explicit API mode. Reflection and parsing are synchronous.
 
-Small, isolated changes are easiest to review: one behavior or documentation issue per topic branch, a test showing the intended public outcome, and corresponding README or KDoc updates. See `CONTRIBUTING.md` for the shared fork/branch/PR path and release policy.
+## Command behavior
+
+1. `Parser.describe<T>()` inspects and validates the annotated class. Named options are ordered by canonical name; positional values are ordered by index. Duplicate aliases/indexes, unknown group references, and invalid annotation defaults fail schema validation.
+2. `parseArguments` creates a no-argument instance, scans argv, converts values, applies fallbacks, checks required inputs and mutually exclusive groups, and returns a result. Named and positional group members must explicitly declare `group = "name"`; a class-level `@OptionGroup` declares the group and whether one member is required.
+3. CLI values take priority over config file values, environment variables, annotation defaults, and property initial values. Config file paths resolve against the process working directory. `--` ends option scanning; an option can use `--name=value`; negative numbers are accepted for numeric inputs. Extra positional tokens are errors.
+4. `parseStructured` accepts typed values keyed by canonical long names (or short names where no long name exists) and positional property names. It rejects unknown fields and invalid types. It applies annotation defaults and property initial values, but does not read config or environment state.
+5. A successful `ParserResult.Parsed.sources` records the source of each supplied property. Initial property values do not appear in this map. Errors expose stable codes and field names; CLI token errors can include a zero-based index. A sensitive option redacts rejected values from diagnostics.
+
+`CommandSpec.toJsonSchema()` describes built-in types, integer bounds, required fields, and group rules with `additionalProperties: false`. Application defaults remain in `CommandSpec` metadata but are not exported as JSON Schema `default` values. A custom converter needs a caller-provided schema; the structured parser still passes its string value to that converter and does not validate arbitrary custom schema keywords.
+
+## Remaining limitations and useful contributions
+
+These are candidate issues, not promises. Add a behavior test for a parser change and update public docs when behavior changes.
+
+| Area | Current boundary | Useful next step |
+| --- | --- | --- |
+| Command shapes | Inputs are mutable properties on a class with a no-argument constructor. There are no nested subcommands or constructor-bound immutable models. | Add one capability at a time with a clear compatibility path. |
+| Custom types | Converters accept strings, and their JSON Schema must be supplied separately. The schema and converter can disagree. | Consider an optional schema-aware converter interface and focused agreement tests. |
+| Structured results | The library describes inputs, not handler outputs; the bridge has no MCP server, transport, authentication, or output serialization. | Keep these in applications or a separate optional adapter where a concrete use case justifies them. |
+| Configuration | Config parsing is a small `key=value` reader using a path relative to the process working directory. | Specify and test escaping, malformed lines, and repeated keys before expanding the format. |
+| Help and discovery | Help text covers annotated inputs, but there is no shell completion or command-tree discovery. | Consider after the basic command contract is stable and requested by users. |
+
+## Contribution and release path
+
+Everyone starts from current `main`, works on a short-lived topic branch or fork, and opens a pull request to `main`. CI runs `verify`; contributors can run `./gradlew spotlessCheck build` locally. Merging a pull request does not publish. A maintainer updates both published module versions in a release pull request, merges after verification, then tags the merged commit to start publication. See [CONTRIBUTING.md](../CONTRIBUTING.md) for commands and release policy.

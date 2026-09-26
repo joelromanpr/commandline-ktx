@@ -15,6 +15,7 @@
  */
 package com.joelromanpr.commandline.ktx.annotations
 
+/** Declares a group; set [Option.group] or [Value.group] on its members. */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 public annotation class OptionGroup(

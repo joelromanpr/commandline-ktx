@@ -49,5 +49,13 @@ public annotation class Option(
      * For `List<String>` properties, this separator character will be used to split the
      * single provided argument string into multiple list elements (e.g., "," for "a,b,c").
      */
-    val separator: String = ""
+    val separator: String = "",
+    /**
+     * Name of the [OptionGroup] this option belongs to, if any.
+     */
+    val group: String = "",
+    /**
+     * Whether rejected values should be redacted from parse diagnostics and schema exports.
+     */
+    val sensitive: Boolean = false
 )

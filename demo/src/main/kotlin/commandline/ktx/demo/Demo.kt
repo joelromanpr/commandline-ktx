@@ -61,19 +61,22 @@ data class Options(
 
     @Option(
         longName = "uri",
-        helpText = "A URL to fetch the greeting text from."
+        helpText = "A URL to fetch the greeting text from.",
+        group = "input-source"
     )
     var uri: Uri? = null,
 
     @Option(
         longName = "text",
-        helpText = "A custom greeting text to display."
+        helpText = "A custom greeting text to display.",
+        group = "input-source"
     )
     var text: String? = null,
 
     @Value(
         index = 0,
-        helpText = "An input file to read the greeting from."
+        helpText = "An input file to read the greeting from.",
+        group = "input-source"
     )
     var inputFile: String? = null,
 

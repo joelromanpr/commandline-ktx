@@ -2,12 +2,13 @@
 
 ## Purpose and layout
 
-`commandline-ktx` is a Kotlin/JVM 17 library for mapping command-line arguments to mutable Kotlin properties through runtime annotations and reflection. It returns `ParserResult` values instead of exiting the process. The published artifact is `io.github.joelromanpr:commandline-ktx`.
+`commandline-ktx` is a Kotlin/JVM 17 library for mapping command-line arguments to mutable Kotlin properties through runtime annotations and reflection. It returns `ParserResult` values instead of exiting the process. The published artifacts are `io.github.joelromanpr:commandline-ktx` and the optional `io.github.joelromanpr:commandline-ktx-mcp-bridge`.
 
 - `library/src/main/kotlin/com/joelromanpr/commandline/ktx/`: public parser, annotations, converter interface, and result/error types. `Parser.kt` owns token scanning, defaults, validation, and help text.
 - `library/src/test/kotlin/commandline/ktx/ParserTest.kt`: parser behavior tests.
-- `demo/`: sample application; it is not the published library.
-- `docs/PROJECT_MAP.md`: architecture, verified limitations, and candidate improvements.
+- `mcp-bridge/`: optional published MCP descriptor and validation bridge; it has no MCP SDK or server runtime dependency.
+- `demo/`: sample application; it is not published.
+- `docs/PROJECT_MAP.md`: architecture, verified limitations, and candidate improvements. `CommandSpec.kt` is the validated command description for structured input and JSON Schema export.
 - `CONTRIBUTING.md`: the branch, pull request, and release path for everyone.
 
 ## Working in this repository
@@ -15,7 +16,7 @@
 - Start from current `main` on a descriptive topic branch. Use a fork for an external contribution or a branch in this repository if you have write access. Open a pull request to `main`; do not push changes directly to `main`.
 - Preserve pre-existing worktree changes and keep generated `build/`, `.gradle/`, and local credentials out of commits.
 - Keep library changes compatible with the public API unless a breaking change is explicitly intended and explained in the pull request. The library uses Kotlin's `explicitApi()` mode; public declarations need explicit visibility and return types.
-- Put behavior changes in `library`, with focused tests in `ParserTest.kt`. Use `demo` to show a real consumer path, but do not rely on its console output as the only test.
+- Put behavior changes in `library`, with focused tests in the library test suite. Use `demo` to show a real consumer path, but do not rely on its console output as the only test.
 - Do not run Maven Central publish tasks as part of ordinary validation. Releases use the separate tag-triggered workflow after a version change goes through a pull request.
 
 ## Style and checks
@@ -27,7 +28,8 @@
 
 ## Known boundaries
 
-- `@OptionGroup` currently has inconsistent behavior: the annotation targets classes, while parsing groups every named option and excludes positional values. Treat this as a bug to fix with focused tests, not as a contract to preserve.
-- Current value priority is command line, config file, environment, annotation default, then the property's initial value. Older documentation differed; verify and test the intended order before changing it.
-- The scanner currently treats a leading `-` as an option and has no `--` delimiter. Extra positional values and duplicate aliases are not validated. Keep these limitations visible when extending parsing.
+- `@OptionGroup` declares a group on the class; each member names it through `@Option(group = ...)` or `@Value(group = ...)`. Only one group annotation is supported per class.
+- CLI value priority is argv, config file, environment, annotation default, then the property's initial value. `parseStructured` uses explicit values and annotation defaults without reading ambient config or environment.
+- Keep CLI parsing, `parseStructured`, `CommandSpec.toJsonSchema()`, and MCP bridge validation aligned. Custom converters accept strings; their JSON Schema must declare `type: string`.
 - Config files are resolved against the process working directory. Do not assume module-relative paths.
+- Both published modules share one version; tag `vX.Y.Z` on merged `main` triggers the release workflow.
