@@ -17,8 +17,19 @@ package com.joelromanpr.commandline.ktx.core
 
 import com.joelromanpr.commandline.ktx.core.ParseError
 
+public enum class ValueSource { CLI, CONFIG, ENVIRONMENT, ANNOTATION_DEFAULT, STRUCTURED }
+
 public sealed class ParserResult<out T> {
-    public data class Parsed<out T>(val value: T) : ParserResult<T>()
+    public data class Parsed<out T>(val value: T) : ParserResult<T>() {
+        /** Source of each supplied property, keyed by Kotlin property name. */
+        public var sources: Map<String, ValueSource> = emptyMap()
+            private set
+
+        internal fun withSources(values: Map<String, ValueSource>): Parsed<T> {
+            sources = values.toMap()
+            return this
+        }
+    }
     public data class NotParsed<out T>(val errors: List<ParseError>) : ParserResult<T>()
 
     public fun isSuccess(): Boolean = this is Parsed

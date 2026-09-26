@@ -5,3 +5,4 @@ plugins {
 rootProject.name = "commandline-ktx"
 include("library")
 include("demo")
+include("mcp-bridge")

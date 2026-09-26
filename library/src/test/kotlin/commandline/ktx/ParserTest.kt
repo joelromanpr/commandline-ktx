@@ -24,6 +24,7 @@ import com.joelromanpr.commandline.ktx.core.ParseError
 import com.joelromanpr.commandline.ktx.core.ParserResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -152,8 +153,8 @@ class ParserTest {
     fun `enforces mutually exclusive option group`() {
         @OptionGroup("input")
         data class Options(
-            @Option(longName = "text") var text: String? = null,
-            @Option(longName = "file") var file: String? = null
+            @Option(longName = "text", group = "input") var text: String? = null,
+            @Option(longName = "file", group = "input") var file: String? = null
         )
         val result = Parser.Default.parseArguments<Options>(arrayOf("--text", "a", "--file", "b"))
         val errors = assertIs<ParserResult.NotParsed<Options>>(result).errors
@@ -164,11 +165,130 @@ class ParserTest {
     fun `enforces required option group`() {
         @OptionGroup("input", required = true)
         data class Options(
-            @Option(longName = "text") var text: String? = null,
-            @Option(longName = "file") var file: String? = null
+            @Option(longName = "text", group = "input") var text: String? = null,
+            @Option(longName = "file", group = "input") var file: String? = null
         )
         val result = Parser.Default.parseArguments<Options>(arrayOf())
         val errors = assertIs<ParserResult.NotParsed<Options>>(result).errors
         assertIs<ParseError.MissingRequired>(errors.first())
     }
+    @Test
+    fun `only declared group members are mutually exclusive`() {
+        @OptionGroup("input", required = true)
+        data class Options(
+            @Option(longName = "verbose") var verbose: Boolean = false,
+            @Option(longName = "text", group = "input") var text: String? = null,
+            @Value(index = 0, group = "input") var file: String? = null
+        )
+
+        val unrelated = Parser.Default.parseArguments<Options>(arrayOf("--verbose"))
+        val missing = assertIs<ParserResult.NotParsed<Options>>(unrelated).errors
+        assertTrue(missing.any { it is ParseError.MissingRequired })
+
+        val named = Parser.Default.parseArguments<Options>(arrayOf("--verbose", "--text", "hello"))
+        val namedOptions = assertIs<ParserResult.Parsed<Options>>(named).value
+        assertTrue(namedOptions.verbose)
+        assertEquals("hello", namedOptions.text)
+
+        val positional = Parser.Default.parseArguments<Options>(arrayOf("input.txt"))
+        assertEquals("input.txt", assertIs<ParserResult.Parsed<Options>>(positional).value.file)
+
+        val both = Parser.Default.parseArguments<Options>(arrayOf("--text", "hello", "input.txt"))
+        assertTrue(assertIs<ParserResult.NotParsed<Options>>(both).errors.any { it is ParseError.ValidationFailed })
+    }
+
+    @Test
+    fun `rejects duplicate aliases and positional indexes`() {
+        data class Aliases(
+            @Option(shortName = 'x', longName = "first") var first: String = "",
+            @Option(shortName = 'x', longName = "second") var second: String = ""
+        )
+        data class Positions(
+            @Value(index = 0) var first: String = "",
+            @Value(index = 0) var second: String = ""
+        )
+
+        val aliasErrors = assertIs<ParserResult.NotParsed<Aliases>>(
+            Parser.Default.parseArguments<Aliases>(arrayOf("-x", "value"))
+        ).errors
+        assertTrue(aliasErrors.any { it is ParseError.ValidationFailed && it.option == "schema" && "-x" in it.reason })
+
+        val positionErrors = assertIs<ParserResult.NotParsed<Positions>>(
+            Parser.Default.parseArguments<Positions>(arrayOf("value"))
+        ).errors
+        assertTrue(positionErrors.any { it is ParseError.ValidationFailed && it.option == "schema" && "index 0" in it.reason })
+    }
+
+    @Test
+    fun `parses negative numbers and equals forms`() {
+        data class Options(
+            @Option(longName = "count") var count: Int = 0,
+            @Option(longName = "ratio") var ratio: Double = 0.0,
+            @Value(index = 0) var position: Int = 0
+        )
+        val result = Parser.Default.parseArguments<Options>(arrayOf("--count", "-3", "--ratio=-1.5", "-2"))
+        val options = assertIs<ParserResult.Parsed<Options>>(result).value
+        assertEquals(-3, options.count)
+        assertEquals(-1.5, options.ratio)
+        assertEquals(-2, options.position)
+    }
+
+    @Test
+    fun `double dash treats later tokens as positional values`() {
+        data class Options(@Value(index = 0) var literal: String = "")
+        val result = Parser.Default.parseArguments<Options>(arrayOf("--", "--not-an-option"))
+        assertEquals("--not-an-option", assertIs<ParserResult.Parsed<Options>>(result).value.literal)
+    }
+
+    @Test
+    fun `rejects surplus positional arguments`() {
+        data class Options(@Value(index = 0) var first: String = "")
+        val result = Parser.Default.parseArguments<Options>(arrayOf("one", "two"))
+        val errors = assertIs<ParserResult.NotParsed<Options>>(result).errors
+        assertTrue(errors.any { it is ParseError.ValidationFailed && it.option == "arg1" })
+    }
+
+    @Test
+    fun `boolean values are strict when supplied explicitly or by default`() {
+        data class Explicit(@Option(longName = "enabled") var enabled: Boolean = true)
+        data class Default(@Option(longName = "enabled", default = "yes") var enabled: Boolean = false)
+
+        val explicit = Parser.Default.parseArguments<Explicit>(arrayOf("--enabled=false"))
+        assertFalse(assertIs<ParserResult.Parsed<Explicit>>(explicit).value.enabled)
+
+        val badInput = Parser.Default.parseArguments<Explicit>(arrayOf("--enabled=maybe"))
+        assertTrue(assertIs<ParserResult.NotParsed<Explicit>>(badInput).errors.any { it is ParseError.InvalidType })
+
+        val badDefault = Parser.Default.parseArguments<Default>(emptyArray())
+        assertTrue(assertIs<ParserResult.NotParsed<Default>>(badDefault).errors.any { it is ParseError.ValidationFailed })
+    }
+
+    @Test
+    fun `invalid group member does not satisfy required group`() {
+        @OptionGroup("input", required = true)
+        data class Options(@Option(longName = "count", group = "input") var count: Int = 0)
+        val result = Parser.Default.parseArguments<Options>(arrayOf("--count", "bad"))
+        val errors = assertIs<ParserResult.NotParsed<Options>>(result).errors
+        assertTrue(errors.any { it is ParseError.InvalidType })
+        assertTrue(errors.any { it is ParseError.MissingRequired })
+    }
+
+    @Test
+    fun `sensitive values are redacted from parse diagnostics`() {
+        data class Options(@Option(longName = "token", sensitive = true) @Range(min = 1, max = 3) var token: Int = 0)
+
+        val invalidType = Parser.Default.parseArguments<Options>(arrayOf("--token=secret-123"))
+        val typeErrors = assertIs<ParserResult.NotParsed<Options>>(invalidType).errors
+        assertFalse(typeErrors.joinToString { it.message }.contains("secret-123"))
+        assertTrue(typeErrors.joinToString { it.message }.contains("<redacted>"))
+
+        val outOfRange = Parser.Default.parseArguments<Options>(arrayOf("--token=9"))
+        val rangeErrors = assertIs<ParserResult.NotParsed<Options>>(outOfRange).errors
+        assertFalse(rangeErrors.joinToString { it.message }.contains("got 9"))
+
+        val unknown = Parser.Default.parseArguments<Options>(arrayOf("--tokne=secret-123"))
+        val unknownErrors = assertIs<ParserResult.NotParsed<Options>>(unknown).errors
+        assertFalse(unknownErrors.joinToString { it.message }.contains("secret-123"))
+    }
+
 }

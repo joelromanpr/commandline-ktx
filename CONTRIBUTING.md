@@ -17,7 +17,7 @@ External contributors can keep a fork current with `git fetch upstream` and bran
 
 ## Local development
 
-The Gradle wrapper supplies Gradle 8.14, and the modules use a Java 17 toolchain. The repository has two modules: `library` contains the published parser and tests, while `demo` shows an application using the library.
+The Gradle wrapper supplies Gradle 8.14, and the modules use a Java 17 toolchain. The repository has three modules: `library` contains the published parser and tests, `mcp-bridge` is an optional published adapter, and `demo` shows an application using the library.
 
 ```bash
 ./gradlew spotlessCheck build
@@ -27,7 +27,7 @@ The Gradle wrapper supplies Gradle 8.14, and the modules use a Java 17 toolchain
 
 `./scripts/prepare_for_pr.sh --check -y` checks Spotless without editing files. Its default mode applies formatting. Keep generated files, local credentials, and unrelated worktree changes out of the pull request.
 
-For architecture and known limitations, see [Project map](docs/PROJECT_MAP.md). The most valuable parser changes include tests for the current option-group behavior, default precedence, negative values, and extra positional arguments.
+For architecture and known limitations, see [Project map](docs/PROJECT_MAP.md). Keep CLI parsing, structured input, and schema export aligned when changing input behavior.
 
 ## Releases
 
@@ -35,7 +35,7 @@ Only maintainers publish. Contributors can note release impact in a pull request
 
 Release when the intended changes are merged and documented, and `verify` passes on `main`. Use a patch version for compatible fixes, minor for compatible additions, and major for breaking API changes.
 
-1. In a pull request, set `library/build.gradle.kts` to `X.Y.Z` without `-SNAPSHOT` and update the README dependency examples. Merge after `verify` passes.
+1. In a pull request, set both `library/build.gradle.kts` and `mcp-bridge/build.gradle.kts` to the same `X.Y.Z` without `-SNAPSHOT` and update the README dependency examples. For a major release, add migration notes at `docs/releases/vX.Y.Z.md`; the workflow prepends them to generated release notes. Merge after `verify` passes.
 2. From a clean checkout of that merged `main` commit, create and push its tag:
 
    ```bash
@@ -46,6 +46,6 @@ Release when the intended changes are merged and documented, and `verify` passes
    git push origin vX.Y.Z
    ```
 
-3. Pushing the tag starts `release.yml` immediately. It checks the tag and version, builds, and publishes to Maven Central. Confirm the workflow succeeds and the artifact is available; then use another pull request to move the library to the next `-SNAPSHOT` version.
+3. Pushing the tag starts `release.yml` immediately. It verifies the tagged commit is on `main`, checks both module versions and the build, then publishes the core and MCP bridge artifacts to Maven Central in one Gradle invocation. After both artifacts are available, the workflow creates a GitHub Release with notes from merged pull requests. Confirm the workflow succeeds; then use another pull request to move both modules to the next `-SNAPSHOT` version.
 
 Conventional Commit messages are welcome (`feat:`, `fix:`, `docs:`, `test:`), but the pull request title and description matter more than a particular commit format.

@@ -1,16 +1,15 @@
 plugins {
     kotlin("jvm")
+    `java-library`
     id("com.vanniktech.maven.publish") version "0.34.0"
-
 }
-
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation(kotlin("reflect"))
+    api(project(":library"))
     testImplementation(kotlin("test"))
 }
 
@@ -27,13 +26,13 @@ version = "2.0.0"
 mavenPublishing {
     coordinates(
         groupId = "io.github.joelromanpr",
-        artifactId = "commandline-ktx",
+        artifactId = "commandline-ktx-mcp-bridge",
         version = version.toString()
     )
 
     pom {
-        name.set("commandline-ktx")
-        description.set("A simple, modern, and type-safe command-line argument parser for Kotlin.")
+        name.set("commandline-ktx-mcp-bridge")
+        description.set("A small MCP tool bridge for commandline-ktx without an MCP runtime dependency.")
         url.set("https://github.com/joelromanpr/commandline-ktx")
 
         licenses {
@@ -58,6 +57,5 @@ mavenPublishing {
         }
     }
 
-    // Configure signing for all publications
     signAllPublications()
 }

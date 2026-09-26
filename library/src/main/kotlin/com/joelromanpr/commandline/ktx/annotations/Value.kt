@@ -35,5 +35,9 @@ public annotation class Value(
     /**
      * A descriptive text for the positional argument, used in the generated help message.
      */
-    val helpText: String = ""
+    val helpText: String = "",
+    /**
+     * Name of the [OptionGroup] this positional argument belongs to, if any.
+     */
+    val group: String = ""
 )
