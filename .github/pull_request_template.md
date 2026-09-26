@@ -1,27 +1,18 @@
 ## Summary
-Briefly explain what this change does and why.
 
-## Linked Issues
-Closes #<issue-number>
+What changed, and why?
 
-## Changes
-- Bullet point list of key changes
-- Keep it short and scannable
+## Related issue (optional)
 
+Link an issue here, or remove this section.
 
-## Checklist
-- [ ] I read and followed CONTRIBUTING.md
+## Verification
 
-- [ ] Tests
-  - [ ] Added/updated tests
-  - [ ] Not applicable
-- [ ] Docs
-  - [ ] KDoc/README updated
-  - [ ] Not applicable
-- [ ] Build passes locally
-  ```bash
-  ./gradlew build
- 
+- [ ] `./gradlew spotlessCheck build` passed locally
+- [ ] Added or updated tests for behavior changes, or explained why none are needed
+- [ ] Updated README or KDoc for public behavior changes, or marked not applicable
+- [ ] Checked API compatibility and release impact
 
-## Reviewer Notes (optional)
-Call out anything that deserves extra attention or context.
+## Reviewer notes
+
+Call out any limitations or decisions that deserve extra attention.

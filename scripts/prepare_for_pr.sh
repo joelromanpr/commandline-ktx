@@ -6,20 +6,20 @@ cd "$(dirname "$0")/.."
 
 print_intro() {
   cat <<'EOF'
-Prepare for PR: this script formats code with Spotless.
+Prepare for PR: this script applies Spotless formatting by default.
 
 Examples:
   - Entire project (default):
-      scripts/spotless.sh
+      scripts/prepare_for_pr.sh
   - Entire project (check mode):
-      scripts/spotless.sh --check
+      scripts/prepare_for_pr.sh --check
   - Specific module (apply):
-      scripts/spotless.sh :app
-      scripts/spotless.sh app
+      scripts/prepare_for_pr.sh :library
+      scripts/prepare_for_pr.sh demo
   - Specific module (check mode):
-      scripts/spotless.sh :app --check
+      scripts/prepare_for_pr.sh :library --check
   - Pass extra Gradle flags:
-      scripts/spotless.sh -- --stacktrace --continue
+      scripts/prepare_for_pr.sh -- --stacktrace --continue
 
 EOF
 }
@@ -27,10 +27,10 @@ EOF
 usage() {
   print_intro
   echo "Usage:"
-  echo "  scripts/spotless.sh [<modulePath>] [--check] [-y|--yes] [-- <extra gradle args>]"
+  echo "  scripts/prepare_for_pr.sh [<modulePath>] [--check] [-y|--yes] [-- <extra gradle args>]"
   echo
   echo "Notes:"
-  echo "  - <modulePath> can be ':app' or 'app' (nested modules like ':feature:core' are supported)."
+  echo "  - <modulePath> can be ':library' or 'demo' (nested module paths are supported)."
   echo "  - Default action is 'apply' across the entire project."
   echo "  - Use --check for verification without modifying files."
   exit 0
@@ -105,9 +105,9 @@ else
   cmd+=("${task}")
 fi
 # Append extra args only if present (avoids unbound issues under set -u)
-if [[ ${#extra_args[@]:-0} -gt 0 ]]; then
-  cmd+=("${extra_args[@]}")
-fi
+for arg in "${extra_args[@]}"; do
+  cmd+=("$arg")
+done
 
 # Show what will run
 printf "About to run: "
